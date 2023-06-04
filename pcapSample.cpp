@@ -15,6 +15,12 @@ struct ContextStruct
 
     u_int unFrameAmount = 0;
     u_int unFrameLimit = 200;
+
+    u_int unStatCountTotal = 0;
+    u_int unStatCountPassed = 0;
+    u_int unStatCountSkipped = 0;
+
+    u_int unStatMaxRate = 0; // byte/s
 };
 
 
@@ -29,9 +35,10 @@ int main(int argc, char *argv[])
     try
     {
         //////////////////////////////
-        infile = "./icmp.pcap";
+        //infile = "./Tests/icmp.pcap";
+        infile = "./Tests/p100000.pcap";
         outfile = "./out.pcap";
-        rateLimit = 100;
+        rateLimit = 2;
         //////////////////////////////
 
         printf("Start...\n");
@@ -62,6 +69,8 @@ void got_packet(u_char *arg, const struct pcap_pkthdr *header, const u_char *pac
     pcap_pkthdr* pHeader;
     ContextStruct* pContext = (ContextStruct*)arg;
 
+    pContext->unStatCountTotal++;
+
     pHeader = new pcap_pkthdr();
     *pHeader = *header;
     pContext->vPacketsInFrame.push_back(pHeader);
@@ -75,17 +84,29 @@ void got_packet(u_char *arg, const struct pcap_pkthdr *header, const u_char *pac
         timeval_subtract(&(header->ts), &(pContext->vPacketsInFrame.at(0)->ts), &frame)
     )
     {
-        printf("erase frame= %ld.%ld\n", frame.tv_sec, frame.tv_usec);
+        //printf("erase frame= %ld.%ld\n", frame.tv_sec, frame.tv_usec);
         pContext->unFrameAmount -= pContext->vPacketsInFrame.at(0)->len;
         delete pContext->vPacketsInFrame.at(0);
         pContext->vPacketsInFrame.erase(pContext->vPacketsInFrame.begin());
     }
-    printf("packet length=%d, tm=%ld.%ld frame= %ld.%ld, %d %ld", header->len, header->ts.tv_sec, header->ts.tv_usec, frame.tv_sec, frame.tv_usec, pContext->unFrameAmount, pContext->vPacketsInFrame.size());
+    //heartBeat();
+    //printf("packet length=%d, tm=%ld.%ld frame= %ld.%ld, %d %ld", header->len, header->ts.tv_sec, header->ts.tv_usec, frame.tv_sec, frame.tv_usec, pContext->unFrameAmount, pContext->vPacketsInFrame.size());
+
+    printf
+    (   
+        "\rPackets total = %d, passed = %d, skipped = %d max rate = %.2f Mbps", 
+        pContext->unStatCountTotal, 
+        pContext->unStatCountPassed, 
+        pContext->unStatCountSkipped,
+        (pContext->unStatMaxRate/125000.0)
+    );
+    
     if((pContext->unFrameAmount + header->len) < pContext->unFrameLimit)
     {
         pContext->unFrameAmount += header->len;
         pcap_dump((u_char*)(pContext->dumpHandle), header, packet);
-        printf(" passed %d\n", pContext->unFrameAmount);
+        //printf(" passed %d\n", pContext->unFrameAmount);
+        pContext->unStatCountPassed++;
     }
     else
     {
@@ -94,7 +115,14 @@ void got_packet(u_char *arg, const struct pcap_pkthdr *header, const u_char *pac
             delete pHeader;
             pContext->vPacketsInFrame.pop_back();
         }
-        printf(" skipped %d\n", pContext->unFrameAmount + header->len);
+        pContext->unStatCountSkipped++;
+        //printf(" skipped %d\n", pContext->unFrameAmount + header->len);
+    }
+
+    // Store max rate
+    if(pContext->unStatMaxRate < pContext->unFrameAmount)
+    {
+        pContext->unStatMaxRate = pContext->unFrameAmount;
     }
 }
 
@@ -126,6 +154,15 @@ int filterOfflineDevice(std::string infile, std::string outfile, u_int rateLimit
 
     // loop
     pcap_loop(handle, -1, got_packet, (u_char*)&context);
+
+    printf
+    (   
+        "Packets total = %d, passed = %d, skipped = %d max rate = %.2f\n", 
+        context.unStatCountTotal, 
+        context.unStatCountPassed, 
+        context.unStatCountSkipped,
+        (context.unStatMaxRate/125000.0)
+    );
 
     // Dump close
     if(context.dumpHandle != NULL)

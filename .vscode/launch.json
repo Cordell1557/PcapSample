@@ -35,21 +35,6 @@
                     "ignoreFailures": true
                 }
             ]
-        },
-        {
-            "name": "C Launch",
-            "request": "launch",
-            "program": "${workspaceFolder}/main",
-            "args": 
-            [
-                "-i",
-                "./in.pcap",
-                "-o",
-                "./out.pcap ",
-                "-l",
-                "100"
-            ],
-           "cwd": "${workspaceFolder}"
-       }
-    ]
+        }
+   ]
 }

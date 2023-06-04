@@ -5,5 +5,6 @@
 
 int timeval_subtract (const struct timeval *x, const struct timeval *y, struct timeval *diff);
 bool process_command_line(int argc, char** argv, std::string& infile, std::string& outfile, u_int& rateLimit);
+void heartBeat();
 
 #endif

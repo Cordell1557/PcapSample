@@ -71,3 +71,13 @@ bool process_command_line(int argc, char** argv, std::string& infile, std::strin
     }
     return true;
 }
+
+void heartBeat()
+{
+    static const char* signArr = "-\\|/-\\|/";
+    static u_int nIndex = 0;
+
+    nIndex = (nIndex + 1)%strlen(signArr);
+
+    printf("\r%c", signArr[nIndex]);
+}

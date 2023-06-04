@@ -5,11 +5,9 @@
             "label": "C/C++: g++ build active file",
             "command": "/usr/bin/g++",
             "args": [
-                "-I${workspaceFolder}/../libpcap-1.10.4",
-                "-L${workspaceFolder}/../libpcap-1.10.4",
                 "-fdiagnostics-color=always",
                 "-g",
-                "${fileDirname}/**.cpp",
+                "${workspaceFolder}/**.cpp",
                 "-o",
                 "${fileDirname}/${fileBasenameNoExtension}",
                 "${workspaceFolder}/../libpcap-1.10.4/libpcap.a"
