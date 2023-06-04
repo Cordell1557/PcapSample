@@ -18,7 +18,7 @@ struct ContextStruct
 };
 
 
-int FilterOfflineDevice(std::string infile, std::string outfile, u_int rateLimit);
+int filterOfflineDevice(std::string infile, std::string outfile, u_int rateLimit);
 
 int main(int argc, char *argv[])
 {
@@ -37,7 +37,7 @@ int main(int argc, char *argv[])
         printf("Start...\n");
         //if(process_command_line(argc, argv, infile, outfile, rateLimit))
         {
-            FilterOfflineDevice(infile, outfile, rateLimit);
+            filterOfflineDevice(infile, outfile, rateLimit);
         }
 
         printf("Finish.\n");
@@ -98,7 +98,7 @@ void got_packet(u_char *arg, const struct pcap_pkthdr *header, const u_char *pac
     }
 }
 
-int FilterOfflineDevice(std::string infile, std::string outfile, u_int rateLimit)
+int filterOfflineDevice(std::string infile, std::string outfile, u_int rateLimit)
 {
     pcap_t *handle;   
     pcap_dumper_t* dumpHandle;
