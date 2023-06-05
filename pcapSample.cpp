@@ -5,178 +5,35 @@
 #include <vector>
 #include <string>
 
-#include "pcap.h"
+#include <pcap.h>
+
 #include "tools.h"
-
-struct ContextStruct
-{
-    pcap_dumper_t* dumpHandle;
-    std::vector <const pcap_pkthdr*> vPacketsInFrame;
-
-    u_int unFrameAmount = 0;
-    u_int unFrameLimit = 200;
-
-    u_int unStatCountTotal = 0;
-    u_int unStatCountPassed = 0;
-    u_int unStatCountSkipped = 0;
-
-    u_int unStatMaxRate = 0; // byte/s
-};
-
-
-int filterOfflineDevice(std::string infile, std::string outfile, u_int rateLimit);
+#include "filterOfflineDevice.h"
 
 int main(int argc, char *argv[])
 {
     std::string infile; 
     std::string outfile; 
     u_int rateLimit = 0;
+    int nRet = 0;
 
     try
     {
-        //////////////////////////////
-        //infile = "./Tests/icmp.pcap";
-        infile = "./Tests/p100000.pcap";
-        outfile = "./out.pcap";
-        rateLimit = 2;
-        //////////////////////////////
-
-        printf("Start...\n");
-        //if(process_command_line(argc, argv, infile, outfile, rateLimit))
+        if(process_command_line(argc, argv, infile, outfile, rateLimit))
         {
-            filterOfflineDevice(infile, outfile, rateLimit);
+            nRet = filterOfflineDevice(infile, outfile, rateLimit);
         }
-
-        printf("Finish.\n");
     }
     catch(std::exception& e)
     {
         fprintf(stderr, "Error: %s\n", e.what());
+        nRet = -1;
     }
     catch(...)
     {
         fprintf(stderr, "Unknown error\n");
+        nRet = -1;
     }
 
-    //getchar();
-
-    return(0);
+    return(nRet);
 }
-
-void got_packet(u_char *arg, const struct pcap_pkthdr *header, const u_char *packet)
-{
-    timeval frame;
-    pcap_pkthdr* pHeader;
-    ContextStruct* pContext = (ContextStruct*)arg;
-
-    pContext->unStatCountTotal++;
-
-    pHeader = new pcap_pkthdr();
-    *pHeader = *header;
-    pContext->vPacketsInFrame.push_back(pHeader);
-
-    //printf("tm=%jd/%jd vPacketsInFrame0= %jd/%jd\n", header->ts.tv_sec, header->ts.tv_usec, vPacketsInFrame.at(0)->ts.tv_sec, vPacketsInFrame.at(0)->ts.tv_usec);
-    // time frame
-    for
-    ( 
-        timeval_subtract(&(header->ts), &(pContext->vPacketsInFrame.at(0)->ts), &frame);
-        frame.tv_sec > 0;
-        timeval_subtract(&(header->ts), &(pContext->vPacketsInFrame.at(0)->ts), &frame)
-    )
-    {
-        //printf("erase frame= %ld.%ld\n", frame.tv_sec, frame.tv_usec);
-        pContext->unFrameAmount -= pContext->vPacketsInFrame.at(0)->len;
-        delete pContext->vPacketsInFrame.at(0);
-        pContext->vPacketsInFrame.erase(pContext->vPacketsInFrame.begin());
-    }
-    //heartBeat();
-    //printf("packet length=%d, tm=%ld.%ld frame= %ld.%ld, %d %ld", header->len, header->ts.tv_sec, header->ts.tv_usec, frame.tv_sec, frame.tv_usec, pContext->unFrameAmount, pContext->vPacketsInFrame.size());
-
-    printf
-    (   
-        "\rPackets total = %d, passed = %d, skipped = %d max rate = %.2f Mbps", 
-        pContext->unStatCountTotal, 
-        pContext->unStatCountPassed, 
-        pContext->unStatCountSkipped,
-        (pContext->unStatMaxRate/125000.0)
-    );
-    
-    if((pContext->unFrameAmount + header->len) < pContext->unFrameLimit)
-    {
-        pContext->unFrameAmount += header->len;
-        pcap_dump((u_char*)(pContext->dumpHandle), header, packet);
-        //printf(" passed %d\n", pContext->unFrameAmount);
-        pContext->unStatCountPassed++;
-    }
-    else
-    {
-        if(pContext->vPacketsInFrame.size() > 0)
-        {
-            delete pHeader;
-            pContext->vPacketsInFrame.pop_back();
-        }
-        pContext->unStatCountSkipped++;
-        //printf(" skipped %d\n", pContext->unFrameAmount + header->len);
-    }
-
-    // Store max rate
-    if(pContext->unStatMaxRate < pContext->unFrameAmount)
-    {
-        pContext->unStatMaxRate = pContext->unFrameAmount;
-    }
-}
-
-int filterOfflineDevice(std::string infile, std::string outfile, u_int rateLimit)
-{
-    pcap_t *handle;   
-    pcap_dumper_t* dumpHandle;
-    char errbuf[PCAP_ERRBUF_SIZE]; 
-    ContextStruct context;
-
-
-    // Set up context
-    context.unFrameLimit = rateLimit * 125000; // Mbps -> bytes/s 1 Mbps = 1,000,000 bits = 125,000 Bytes 
-
-    // Open offline device
-    handle = pcap_open_offline(infile.c_str(), errbuf);
-    if (handle == NULL) 
-    {
-        fprintf(stderr, "Couldn't open device %s: %s\n", infile.c_str(), errbuf);
-        return(2);
-    }
-    // Open output dump file
-    context.dumpHandle = pcap_dump_open(handle, outfile.c_str());
-    if(context.dumpHandle == NULL)
-    {
-        pcap_perror(handle, "pcap_dump_open");
-        return(2);
-    }
-
-    // loop
-    pcap_loop(handle, -1, got_packet, (u_char*)&context);
-
-    printf
-    (   
-        "Packets total = %d, passed = %d, skipped = %d max rate = %.2f\n", 
-        context.unStatCountTotal, 
-        context.unStatCountPassed, 
-        context.unStatCountSkipped,
-        (context.unStatMaxRate/125000.0)
-    );
-
-    // Dump close
-    if(context.dumpHandle != NULL)
-    {
-        pcap_dump_close(context.dumpHandle);
-        context.dumpHandle = NULL;
-    }
-
-    // Device close
-    if(handle != NULL)
-    {
-        pcap_close(handle);
-        handle = NULL;
-    }
-
-    return(0);
-}    

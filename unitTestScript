@@ -1,0 +1,9 @@
+#!/bin/bash
+echo "\n1000 packets test =============================== "
+./pcapSample -i ./Tests/p1000.pcap -o ./Tests/out1000.pcap -l 12
+
+echo "\n10 000 packets test =============================== "
+./pcapSample -i ./Tests/p10000.pcap -o ./Tests/out10000.pcap -l 12
+
+echo "\n100 000 packets test =============================== "
+./pcapSample -i ./Tests/p100000.pcap -o ./Tests/out100000.pcap -l 12
