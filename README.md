@@ -10,3 +10,4 @@ Usage: ./pcapSample
 	-o,--output		ouput file
 	-l,--limit		limimt in Mbps
 Sample: ./pcapSample -i ./in.pcap -o ./out.pcap -l 100
+
