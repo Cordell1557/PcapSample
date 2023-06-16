@@ -10,7 +10,7 @@
                 "${workspaceFolder}/**.cpp",
                 "-o",
                 "${fileDirname}/pcapSample",
-                "$libpcap.a"
+                "libpcap.a"
             ],
             "options": {
                 "cwd": "${fileDirname}"
